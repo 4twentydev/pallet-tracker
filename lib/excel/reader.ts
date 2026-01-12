@@ -3,7 +3,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import type { PalletTask, PalletData } from '@/types/pallet';
 
-const EXCEL_FILE_PATH = path.join(process.cwd(), 'data', 'ReleaseCheckList (1).xlsx');
+const EXCEL_FILE_PATH = path.join('C:', 'Users', '4twen', 'OneDrive', 'Release-CheckList.xlsx');
 const SHEET_NAME = 'PalletTracker';
 
 /**
