@@ -7,7 +7,11 @@
       "WebSearch",
       "Bash(pnpm add:*)",
       "Bash(pnpm run build)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git remote add:*)"
     ]
   }
 }
