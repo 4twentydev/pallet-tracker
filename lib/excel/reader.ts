@@ -1,18 +1,64 @@
 import ExcelJS from 'exceljs';
 import { promises as fs } from 'fs';
-import path from 'path';
 import type { PalletTask, PalletData } from '@/types/pallet';
+import {
+  EXCEL_FILE_PATH,
+  SHEET_NAME,
+  retryFileOperation,
+  computeFileHash,
+  isFileLockError,
+  createTempCopy,
+  cleanupTempFile,
+} from './server-utils';
 
-const EXCEL_FILE_PATH = path.join(process.cwd(), 'data', 'ReleaseCheckList (1).xlsx');
-const SHEET_NAME = 'PalletTracker';
+/**
+ * Attempts to load the workbook, falling back to a temp copy if the file is locked
+ * @returns Object with workbook, whether it's read-only, and optional temp path to clean up
+ */
+async function loadWorkbookWithFallback(): Promise<{
+  workbook: ExcelJS.Workbook;
+  readOnly: boolean;
+  tempPath?: string;
+}> {
+  // First, try to load directly with retry logic for temporary locks
+  try {
+    console.log('[loadWorkbookWithFallback] Attempting direct read...');
+    const workbook = await retryFileOperation(async () => {
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.readFile(EXCEL_FILE_PATH);
+      return wb;
+    });
+    console.log('[loadWorkbookWithFallback] Direct read successful');
+    return { workbook, readOnly: false };
+  } catch (error) {
+    // If it's a persistent lock (Excel has file open), try temp copy
+    if (isFileLockError(error)) {
+      console.log('[loadWorkbookWithFallback] File locked, trying temp copy fallback...');
+      try {
+        const tempPath = await createTempCopy();
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.readFile(tempPath);
+        console.log('[loadWorkbookWithFallback] Read from temp copy successful (read-only mode)');
+        return { workbook, readOnly: true, tempPath };
+      } catch (tempError) {
+        console.error('[loadWorkbookWithFallback] Temp copy fallback failed:', tempError);
+        throw new Error('Cannot read Excel file. Please close Excel and try again.');
+      }
+    }
+    throw error;
+  }
+}
 
 /**
  * Reads pallet data from the Excel file
+ * Falls back to read-only mode if Excel has the file open
  * @returns Promise containing pallets array and file metadata
  */
 export async function readPalletData(): Promise<PalletData> {
   console.log('[readPalletData] Starting...');
   console.log('[readPalletData] Excel file path:', EXCEL_FILE_PATH);
+
+  let tempPath: string | undefined;
 
   try {
     // Get file metadata for optimistic locking
@@ -20,11 +66,11 @@ export async function readPalletData(): Promise<PalletData> {
     const stats = await fs.stat(EXCEL_FILE_PATH);
     console.log('[readPalletData] File size:', stats.size, 'bytes, modified:', new Date(stats.mtimeMs).toISOString());
 
-    // Load the workbook
+    // Load the workbook (with fallback to temp copy if locked)
     console.log('[readPalletData] Loading workbook...');
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(EXCEL_FILE_PATH);
-    console.log('[readPalletData] Workbook loaded');
+    const { workbook, readOnly, tempPath: tp } = await loadWorkbookWithFallback();
+    tempPath = tp;
+    console.log('[readPalletData] Workbook loaded, readOnly:', readOnly);
 
     // Get the PalletTracker worksheet
     console.log('[readPalletData] Looking for sheet:', SHEET_NAME);
@@ -77,14 +123,29 @@ export async function readPalletData(): Promise<PalletData> {
       console.log('[readPalletData] Sample pallet IDs:', pallets.slice(0, 3).map(p => p.id));
     }
 
+    // Compute content hash for reliable conflict detection (works with cloud sync)
+    // Use temp file hash if we're in read-only mode, otherwise use original file
+    const contentHash = await computeFileHash(tempPath || EXCEL_FILE_PATH);
+    console.log('[readPalletData] Content hash:', contentHash.substring(0, 12) + '...');
+
+    // Clean up temp file if we created one
+    if (tempPath) {
+      await cleanupTempFile(tempPath);
+    }
+
     return {
       pallets,
       metadata: {
         mtime: stats.mtimeMs,
-        version: stats.mtimeMs.toString(),
+        version: contentHash,
+        readOnly,
       },
     };
   } catch (error) {
+    // Clean up temp file on error too
+    if (tempPath) {
+      await cleanupTempFile(tempPath);
+    }
     console.error('[readPalletData] ERROR:', error);
     if (error instanceof Error) {
       throw new Error(`Failed to read Excel file: ${error.message}`);

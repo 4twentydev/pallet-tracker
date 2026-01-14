@@ -43,11 +43,11 @@ export default function PalletCard({
           )}
         </div>
 
-        {/* Toggle Button - writes to Excel */}
+        {/* Toggle Button */}
         <button
           onClick={onToggleStatus}
           disabled={isPending}
-          title={pallet.made ? 'Mark as not made (writes to Excel)' : 'Mark as made (writes to Excel)'}
+          title={pallet.made ? 'Mark as not made' : 'Mark as made'}
           className={cn(
             'button-pad rounded-full text-sm font-semibold transition-all',
             pallet.made
