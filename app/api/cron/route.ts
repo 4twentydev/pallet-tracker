@@ -16,11 +16,11 @@ import { reprocessFailedNotifications } from '@/lib/services/webhook-processor';
  *   "crons": [
  *     {
  *       "path": "/api/cron?task=renew",
- *       "schedule": "0 */12 * * *"
+ *       "schedule": "0 0,12 * * *"
  *     },
  *     {
  *       "path": "/api/cron?task=notifications",
- *       "schedule": "*/5 * * * *"
+ *       "schedule": "0,5,10,15,20,25,30,35,40,45,50,55 * * * *"
  *     },
  *     {
  *       "path": "/api/cron?task=reprocess",
