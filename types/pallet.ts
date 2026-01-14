@@ -23,7 +23,8 @@ export interface JobGroup {
 
 export interface FileMetadata {
   mtime: number; // File modification timestamp (milliseconds)
-  version: string; // Version string for optimistic locking
+  version: string; // SHA-256 content hash for optimistic locking (reliable with cloud sync)
+  readOnly: boolean; // True if file is locked by Excel - edits disabled
 }
 
 export interface PalletData {

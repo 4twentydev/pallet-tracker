@@ -1,11 +1,8 @@
 import ExcelJS from 'exceljs';
-import { promises as fs } from 'fs';
-import path from 'path';
 import type { PalletData } from '@/types/pallet';
 import { readPalletData } from './reader';
+import { EXCEL_FILE_PATH, SHEET_NAME, retryFileOperation, computeFileHash, isFileLockError } from './server-utils';
 
-const EXCEL_FILE_PATH = path.join(process.cwd(), 'data', 'ReleaseCheckList (1).xlsx');
-const SHEET_NAME = 'PalletTracker';
 const MADE_COLUMN = 6; // Column F (Made)
 
 /**
@@ -21,27 +18,33 @@ export async function updatePalletMadeStatus(
   made: boolean,
   expectedVersion: string
 ): Promise<PalletData> {
-  console.log('[updatePalletMadeStatus] Starting:', { palletId, made, expectedVersion });
+  console.log('[updatePalletMadeStatus] Starting:', { palletId, made, expectedVersion: expectedVersion.substring(0, 12) + '...' });
 
   try {
-    // Check for conflicts (optimistic locking)
-    const currentStats = await fs.stat(EXCEL_FILE_PATH);
-    const currentVersion = currentStats.mtimeMs.toString();
-    console.log('[updatePalletMadeStatus] Current version:', currentVersion);
+    // Check for conflicts using content hash (works reliably with cloud sync)
+    const currentHash = await computeFileHash();
+    console.log('[updatePalletMadeStatus] Current hash:', currentHash.substring(0, 12) + '...');
+    console.log('[updatePalletMadeStatus] Expected hash:', expectedVersion.substring(0, 12) + '...');
 
-    if (currentVersion !== expectedVersion) {
-      console.error('[updatePalletMadeStatus] VERSION MISMATCH');
+    if (currentHash !== expectedVersion) {
+      console.error('[updatePalletMadeStatus] CONTENT HASH MISMATCH');
+      console.error('[updatePalletMadeStatus] Current:  ', currentHash);
+      console.error('[updatePalletMadeStatus] Expected: ', expectedVersion);
       throw new Error('CONFLICT: File has been modified externally');
     }
+    console.log('[updatePalletMadeStatus] Hash verified - proceeding with update');
 
     // Parse the pallet ID (using :: as delimiter to handle hyphens in release numbers)
     const [jobNumber, releaseNumber, palletNumber] = palletId.split('::');
     console.log('[updatePalletMadeStatus] Parsed ID:', { jobNumber, releaseNumber, palletNumber });
 
-    // Load the workbook
+    // Load the workbook with retry logic
     console.log('[updatePalletMadeStatus] Loading workbook from:', EXCEL_FILE_PATH);
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(EXCEL_FILE_PATH);
+    const workbook = await retryFileOperation(async () => {
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.readFile(EXCEL_FILE_PATH);
+      return wb;
+    });
 
     const worksheet = workbook.getWorksheet(SHEET_NAME);
     if (!worksheet) {
@@ -73,9 +76,11 @@ export async function updatePalletMadeStatus(
       throw new Error(`Pallet ${palletId} not found in Excel file`);
     }
 
-    // Write the changes back to the file
+    // Write the changes back to the file with retry logic
     console.log('[updatePalletMadeStatus] Writing to file...');
-    await workbook.xlsx.writeFile(EXCEL_FILE_PATH);
+    await retryFileOperation(async () => {
+      await workbook.xlsx.writeFile(EXCEL_FILE_PATH);
+    });
     console.log('[updatePalletMadeStatus] File written successfully');
 
     // Return the updated data
@@ -85,6 +90,12 @@ export async function updatePalletMadeStatus(
     return updatedData;
   } catch (error) {
     console.error('[updatePalletMadeStatus] ERROR:', error);
+
+    // Check if this is a file lock error (Excel has file open)
+    if (isFileLockError(error)) {
+      throw new Error('FILE_LOCKED: Cannot save - Excel has the file open. Close Excel and try again.');
+    }
+
     if (error instanceof Error) {
       throw error;
     }
@@ -106,11 +117,10 @@ export async function bulkUpdatePalletStatus(
   expectedVersion: string
 ): Promise<PalletData> {
   try {
-    // Check for conflicts (optimistic locking)
-    const currentStats = await fs.stat(EXCEL_FILE_PATH);
-    const currentVersion = currentStats.mtimeMs.toString();
+    // Check for conflicts using content hash (works reliably with cloud sync)
+    const currentHash = await computeFileHash();
 
-    if (currentVersion !== expectedVersion) {
+    if (currentHash !== expectedVersion) {
       throw new Error('CONFLICT: File has been modified externally');
     }
 
@@ -118,9 +128,12 @@ export async function bulkUpdatePalletStatus(
     const palletIdsSet = new Set(palletIds);
     const foundIds = new Set<string>();
 
-    // Load the workbook
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.readFile(EXCEL_FILE_PATH);
+    // Load the workbook with retry logic
+    const workbook = await retryFileOperation(async () => {
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.readFile(EXCEL_FILE_PATH);
+      return wb;
+    });
 
     const worksheet = workbook.getWorksheet(SHEET_NAME);
     if (!worksheet) {
@@ -148,12 +161,19 @@ export async function bulkUpdatePalletStatus(
       throw new Error(`Pallets not found: ${notFound.join(', ')}`);
     }
 
-    // Write the changes back to the file
-    await workbook.xlsx.writeFile(EXCEL_FILE_PATH);
+    // Write the changes back to the file with retry logic
+    await retryFileOperation(async () => {
+      await workbook.xlsx.writeFile(EXCEL_FILE_PATH);
+    });
 
     // Return the updated data
     return readPalletData();
   } catch (error) {
+    // Check if this is a file lock error (Excel has file open)
+    if (isFileLockError(error)) {
+      throw new Error('FILE_LOCKED: Cannot save - Excel has the file open. Close Excel and try again.');
+    }
+
     if (error instanceof Error) {
       throw error;
     }

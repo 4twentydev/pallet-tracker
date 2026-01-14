@@ -12,7 +12,8 @@
       "Bash(git push:*)",
       "Bash(gh repo create:*)",
       "Bash(git remote add:*)",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "Bash(pnpm build:*)"
     ]
   }
 }
