@@ -7,7 +7,6 @@ import { filterPallets, groupByJobAndRelease } from '@/lib/excel/utils';
 import type { PalletData, FilterOptions } from '@/types/pallet';
 import FilterBar from './filter-bar';
 import JobGroup from './job-group';
-import ConflictDialog from './conflict-dialog';
 
 export default function PalletTracker({ initialData }: { initialData: PalletData }) {
   const [data, setData] = useState(initialData);
@@ -21,7 +20,6 @@ export default function PalletTracker({ initialData }: { initialData: PalletData
     sizeFilter: [],
   });
 
-  const [showConflict, setShowConflict] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
 
   // Apply filters and group pallets
@@ -49,16 +47,12 @@ export default function PalletTracker({ initialData }: { initialData: PalletData
       if (result.success && result.data) {
         console.log('[handleTogglePallet] Success! Updating data...');
         setData(result.data);
-      } else if (result.error === 'conflict') {
-        console.error('[handleTogglePallet] Conflict error');
-        setShowConflict(true);
-        setErrorMessage(result.message || 'File has been modified externally');
       } else {
-        console.error('[handleTogglePallet] Unknown error:', result.error, result.message);
+        console.error('[handleTogglePallet] Error:', result.error, result.message);
         setErrorMessage(result.message || 'An error occurred');
-        // Show error dialog
+        // Show error and offer reload
         const errorMsg = result.message || 'An error occurred';
-        if (window.confirm(`Error: ${errorMsg}\n\nCheck the console for details. Click OK to reload the page.`)) {
+        if (window.confirm(`Error: ${errorMsg}\n\nClick OK to reload the page.`)) {
           window.location.reload();
         }
       }
@@ -99,14 +93,6 @@ export default function PalletTracker({ initialData }: { initialData: PalletData
           ))
         )}
       </div>
-
-      {/* Conflict Dialog */}
-      <ConflictDialog
-        open={showConflict}
-        message={errorMessage}
-        onClose={() => setShowConflict(false)}
-        onReload={() => window.location.reload()}
-      />
     </div>
   );
 }

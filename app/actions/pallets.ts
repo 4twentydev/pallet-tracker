@@ -1,20 +1,19 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { readPalletData } from '@/lib/excel/reader';
-import { updatePalletMadeStatus, bulkUpdatePalletStatus } from '@/lib/excel/writer';
+import { getPallets, updatePalletMade, bulkUpdatePalletsMade } from '@/lib/db/queries';
 import type { ServerActionResult } from '@/types/pallet';
 
 /**
- * Server Action to get all pallet data from Excel
+ * Server Action to get all pallet data from database
  */
 export async function getPalletData() {
   try {
-    const data = await readPalletData();
+    const data = await getPallets();
     return data;
   } catch (error) {
     console.error('Failed to read pallet data:', error);
-    throw new Error('Failed to load pallet data. Please check that the Excel file exists.');
+    throw new Error('Failed to load pallet data from database.');
   }
 }
 
@@ -32,8 +31,8 @@ export async function togglePalletStatus(
     const newStatus = !currentStatus;
     console.log('[togglePalletStatus] Writing new status:', newStatus);
 
-    const data = await updatePalletMadeStatus(palletId, newStatus, version);
-    console.log('[togglePalletStatus] Write successful, pallets count:', data.pallets.length);
+    const data = await updatePalletMade(palletId, newStatus, version);
+    console.log('[togglePalletStatus] Update successful, pallets count:', data.pallets.length);
 
     revalidatePath('/');
     console.log('[togglePalletStatus] Path revalidated');
@@ -47,25 +46,15 @@ export async function togglePalletStatus(
 
     if (error instanceof Error) {
       console.error('[togglePalletStatus] Error message:', error.message);
-      console.error('[togglePalletStatus] Error stack:', error.stack);
-      console.error('[togglePalletStatus] Error name:', error.name);
 
-      if (error.message.includes('CONFLICT')) {
-        return {
-          success: false,
-          error: 'conflict',
-          message: 'The Excel file has been modified externally. Please refresh to see the latest data.',
-        };
-      }
       if (error.message.includes('not found')) {
         return {
           success: false,
           error: 'not_found',
-          message: `Pallet ${palletId} could not be found in the Excel file.`,
+          message: `Pallet ${palletId} could not be found.`,
         };
       }
 
-      // Return the actual error message instead of generic one
       return {
         success: false,
         error: 'unknown',
@@ -90,7 +79,7 @@ export async function bulkTogglePallets(
   version: string
 ): Promise<ServerActionResult> {
   try {
-    const data = await bulkUpdatePalletStatus(palletIds, makeStatus, version);
+    const data = await bulkUpdatePalletsMade(palletIds, makeStatus, version);
 
     revalidatePath('/');
 
@@ -102,13 +91,6 @@ export async function bulkTogglePallets(
     console.error('Failed to bulk update pallets:', error);
 
     if (error instanceof Error) {
-      if (error.message.includes('CONFLICT')) {
-        return {
-          success: false,
-          error: 'conflict',
-          message: 'The Excel file has been modified externally. Please refresh to see the latest data.',
-        };
-      }
       if (error.message.includes('not found')) {
         return {
           success: false,

@@ -2,6 +2,9 @@ import { getPalletData } from './actions/pallets';
 import PalletTracker from './components/pallet-tracker';
 import ThemeToggle from './components/theme-toggle';
 
+// Force dynamic rendering - file hash must be computed fresh on each request
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
   let initialData;
 

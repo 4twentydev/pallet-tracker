@@ -37,6 +37,9 @@ pnpm lint
 - **Styling**: Tailwind CSS 4 with custom theme
 - **UI Components**: shadcn/ui (New York style)
 - **Fonts**: Geist Sans and Geist Mono from next/font/google
+- **Excel Integration**: ExcelJS for reading/writing Excel files
+- **Animation**: Framer Motion
+- **Validation**: Zod
 
 ### Directory Structure
 ```
@@ -113,15 +116,14 @@ The project has a comprehensive style guide in **STYLE_GUIDE.md** that documents
 - Components are installed in `components/ui/`
 
 ### Theme Colors
-The project uses OKLCH color space for colors defined in globals.css. Both light and dark themes are preconfigured with semantic color tokens:
-- `--background`, `--foreground`
-- `--card`, `--card-foreground`
-- `--primary`, `--secondary`, `--muted`, `--accent`
-- `--destructive`, `--border`, `--input`, `--ring`
-- Chart colors: `--chart-1` through `--chart-5`
-- Sidebar colors: `--sidebar`, `--sidebar-foreground`, etc.
+Both light and dark themes are preconfigured with semantic color tokens defined in globals.css:
+- Core: `--background`, `--foreground`, `--surface`, `--surface-muted`
+- Borders: `--border`, `--border-strong`
+- Text: `--muted`, `--muted-strong`
+- Accents: `--accent-primary`, `--accent-secondary`
+- Status: `--success`, `--error`, `--warning`
 
-Dark mode is toggled via the `.dark` class on the root element.
+Dark mode is toggled via the `data-theme` attribute on the HTML element (`data-theme="dark"` or `data-theme="light"`).
 
 ### Utility Function
 The `cn()` helper in `lib/utils.ts` combines clsx and tailwind-merge for conditional className composition:
@@ -165,10 +167,11 @@ This application manages pallet tracking data stored in Excel files located in t
    - `ServerActionResult<T>` - Standardized server action response
 
 5. **Excel File Structure**:
+   - File location: `data/Release-CheckList.xlsx`
    - Sheet name: `PalletTracker`
    - Columns: Job Number | Release Number | Pallet Number | Size | Elevation | Made (X/empty) | Acc List | Shipped Date | Notes
    - Row 1 is the header, data starts at row 2
-   - Pallet ID format: `${jobNumber}::${releaseNumber}::${palletNumber}`
+   - Pallet ID format: `${jobNumber}::${releaseNumber}::${palletNumber}` (uses `::` delimiter to handle hyphens in release numbers)
 
 ### Component Structure
 Components in `app/components/` are feature-specific and follow these patterns:
