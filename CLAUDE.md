@@ -8,6 +8,43 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Note**: The package.json lists the project name as "pallet-router" but the repository and application are referred to as "pallet-tracker".
 
+## Getting Started
+
+### Prerequisites
+- Node.js 18+ and pnpm installed
+- Vercel Postgres database (or compatible PostgreSQL database)
+
+### Initial Setup
+1. Install dependencies:
+   ```bash
+   pnpm install
+   ```
+
+2. Configure environment variables:
+   Create a `.env.local` file in the project root:
+   ```env
+   POSTGRES_URL=your_postgres_connection_string
+   IMPORT_SECRET_KEY=optional_secret_for_import_api  # Optional
+   ```
+
+3. Set up the database schema:
+   ```bash
+   pnpm db:push
+   ```
+
+4. (Optional) Import initial data from Excel:
+   ```bash
+   # Ensure data/Release-CheckList.xlsx exists first
+   curl -X POST http://localhost:3000/api/import
+   ```
+
+5. Start the development server:
+   ```bash
+   pnpm dev
+   ```
+
+   Open [http://localhost:3000](http://localhost:3000) to view the application.
+
 ## Development Commands
 
 ### Essential Commands
@@ -36,6 +73,11 @@ pnpm db:push
 # Open Drizzle Studio (database GUI)
 pnpm db:studio
 ```
+
+### Testing
+- **No test framework is currently configured**
+- Use `pnpm lint` for code quality checks
+- Manual testing via `pnpm dev` is the current testing approach
 
 ### Package Management
 - **Package Manager**: pnpm (evidenced by pnpm-lock.yaml)
@@ -90,8 +132,8 @@ lib/
 types/
   pallet.ts           # TypeScript type definitions
 components/           # shadcn/ui components
-  ui/                 # UI component directory
-drizzle/              # Database migrations
+  ui/                 # UI component directory (created when first shadcn component is added)
+drizzle/              # Database migrations (created after first `pnpm db:generate`)
 ```
 
 ### Path Aliases
@@ -332,11 +374,21 @@ Both fonts are available as CSS variables:
 6. Add corresponding UI handler in component
 
 ### Importing Data from Excel
-1. Place Excel file at `data/Release-CheckList.xlsx`
+1. **Ensure Excel file exists** at `data/Release-CheckList.xlsx` (must be present before import)
 2. Ensure `POSTGRES_URL` environment variable is set
 3. Optionally set `IMPORT_SECRET_KEY` for authentication
-4. Run: `curl -X POST http://localhost:3000/api/import`
-5. Check response for success/error status
+4. Start the dev server: `pnpm dev`
+5. Run: `curl -X POST http://localhost:3000/api/import`
+6. Check response for success/error status
+
+### Updating Application Metadata
+The `app/layout.tsx` file contains default Next.js metadata that should be updated:
+```typescript
+export const metadata: Metadata = {
+  title: "Pallet Tracker",  // Currently "Create Next App"
+  description: "Manufacturing pallet tracking application",
+};
+```
 
 ### Adding a New Component
 1. Create component file in `app/components/` (for feature components) or `components/ui/` (for shadcn components)
