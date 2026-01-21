@@ -8,8 +8,20 @@ export interface SessionData {
   isLoggedIn: boolean;
 }
 
+const isProduction = process.env.NODE_ENV === 'production';
+const devFallbackSecret = 'dev-session-secret-change-me-please-32-chars';
+const resolvedSessionSecret = process.env.SESSION_SECRET ?? (isProduction ? undefined : devFallbackSecret);
+
+if (!resolvedSessionSecret) {
+  throw new Error('SESSION_SECRET is not set. Add it to .env.local before running the app.');
+}
+
+if (!process.env.SESSION_SECRET && !isProduction) {
+  console.warn('[session] SESSION_SECRET is missing. Using a development-only fallback secret.');
+}
+
 const sessionOptions = {
-  password: process.env.SESSION_SECRET!,
+  password: resolvedSessionSecret,
   cookieName: 'pallet-tracker-session',
   cookieOptions: {
     secure: process.env.NODE_ENV === 'production',
