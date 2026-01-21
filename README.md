@@ -58,7 +58,7 @@ A Next.js application for tracking manufacturing pallets with PIN-based authenti
 5. **Create an admin user**
 
    ```bash
-   pnpm tsx scripts/create-admin.ts "Admin Name" "1234"
+   pnpm dlx tsx scripts/create-admin.ts "Admin Name" "1234"
    ```
 
    Replace "Admin Name" and "1234" with your desired name and PIN (minimum 4 characters).
@@ -163,7 +163,7 @@ You can create more users (admin or regular) using the script:
 
 ```bash
 # Create an admin
-pnpm tsx scripts/create-admin.ts "Admin Name" "adminPIN"
+pnpm dlx tsx scripts/create-admin.ts "Admin Name" "adminPIN"
 
 # The script creates admin users by default
 # To create regular users, modify the script or add them via database
@@ -230,7 +230,7 @@ scripts/
 5. After deployment, create admin user:
    ```bash
    vercel env pull .env.local
-   pnpm tsx scripts/create-admin.ts "Admin" "yourpin"
+   pnpm dlx tsx scripts/create-admin.ts "Admin" "yourpin"
    ```
 
 ## Support

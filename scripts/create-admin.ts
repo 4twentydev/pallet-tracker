@@ -2,15 +2,15 @@ import { createUser } from '../lib/db/user-queries';
 
 /**
  * Script to create the first admin user
- * Run with: npx tsx scripts/create-admin.ts
+ * Run with: pnpm dlx tsx scripts/create-admin.ts
  */
 async function main() {
   const name = process.argv[2];
   const pin = process.argv[3];
 
   if (!name || !pin) {
-    console.error('Usage: npx tsx scripts/create-admin.ts <name> <pin>');
-    console.error('Example: npx tsx scripts/create-admin.ts "Admin User" "1234"');
+    console.error('Usage: pnpm dlx tsx scripts/create-admin.ts <name> <pin>');
+    console.error('Example: pnpm dlx tsx scripts/create-admin.ts "Admin User" "1234"');
     process.exit(1);
   }
 
