@@ -27,7 +27,14 @@ async function main() {
     console.log('PIN:', pin);
     console.log('\nYou can now sign in with this PIN.');
   } catch (error) {
+    const errorMessage = String(error);
     console.error('❌ Failed to create admin user:', error);
+
+    if (errorMessage.includes('relation "users" does not exist') || errorMessage.includes('42P01')) {
+      console.error('\nThe database schema is missing. Run the following to create tables:');
+      console.error('  pnpm db:push');
+    }
+
     process.exit(1);
   }
 }
