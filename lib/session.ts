@@ -8,8 +8,11 @@ export interface SessionData {
   isLoggedIn: boolean;
 }
 
-const sessionOptions = {
-  password: process.env.SESSION_SECRET!,
+const isProduction = process.env.NODE_ENV === 'production';
+const devFallbackSecret = 'dev-session-secret-change-me-please-32-chars';
+const resolvedSessionSecret = process.env.SESSION_SECRET ?? (isProduction ? undefined : devFallbackSecret);
+
+const baseSessionOptions = {
   cookieName: 'pallet-tracker-session',
   cookieOptions: {
     secure: process.env.NODE_ENV === 'production',
@@ -19,9 +22,24 @@ const sessionOptions = {
   },
 };
 
+function resolveSessionOptions() {
+  if (!resolvedSessionSecret) {
+    throw new Error('SESSION_SECRET is not set. Add it to .env.local before running the app.');
+  }
+
+  if (!process.env.SESSION_SECRET && !isProduction) {
+    console.warn('[session] SESSION_SECRET is missing. Using a development-only fallback secret.');
+  }
+
+  return {
+    ...baseSessionOptions,
+    password: resolvedSessionSecret,
+  };
+}
+
 export async function getSession(): Promise<IronSession<SessionData>> {
   const cookieStore = await cookies();
-  return getIronSession<SessionData>(cookieStore, sessionOptions);
+  return getIronSession<SessionData>(cookieStore, resolveSessionOptions());
 }
 
 export async function requireAuth() {
