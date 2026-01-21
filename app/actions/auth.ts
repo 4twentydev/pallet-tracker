@@ -34,10 +34,19 @@ export async function logout() {
 }
 
 export async function getSessionData() {
-  const session = await getSession();
-  return {
-    isLoggedIn: session.isLoggedIn || false,
-    name: session.name,
-    role: session.role,
-  };
+  try {
+    const session = await getSession();
+    return {
+      isLoggedIn: session.isLoggedIn || false,
+      name: session.name,
+      role: session.role,
+    };
+  } catch (error) {
+    console.error('[getSessionData] Failed to read session:', error);
+    return {
+      isLoggedIn: false,
+      name: undefined,
+      role: undefined,
+    };
+  }
 }
