@@ -30,7 +30,19 @@ export function AuthStatus() {
           Sign in to access your OneDrive pallet data
         </p>
         <button
-          onClick={() => signIn("azure-ad")}
+          onClick={async () => {
+            try {
+              const result = await signIn("azure-ad", {
+                callbackUrl: "/",
+                redirect: true
+              });
+              if (result?.error) {
+                console.error("[Auth] Sign-in error:", result.error);
+              }
+            } catch (error) {
+              console.error("[Auth] Sign-in exception:", error);
+            }
+          }}
           className="px-4 py-2 bg-accent-primary text-white rounded-full hover:opacity-90 transition-opacity"
         >
           Sign in with Microsoft

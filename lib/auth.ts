@@ -46,9 +46,20 @@ export const authOptions: AuthOptions = {
   },
   pages: {
     signIn: "/",
-    error: "/",
+    error: "/auth/error",
   },
   debug: process.env.NODE_ENV === "development",
+  events: {
+    async signIn(message) {
+      console.log("[Auth Event] Sign in:", message);
+    },
+    async signOut(message) {
+      console.log("[Auth Event] Sign out:", message);
+    },
+    async session(message) {
+      console.log("[Auth Event] Session:", message);
+    },
+  },
 };
 
 async function refreshAccessToken(token: JWT) {
