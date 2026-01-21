@@ -41,9 +41,11 @@ export function LoginForm() {
                 id="pin"
                 name="pin"
                 required
+                minLength={4}
+                maxLength={50}
                 autoFocus
                 className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-foreground focus:border-accent-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/20"
-                placeholder="Enter your PIN"
+                placeholder="Enter your PIN (min 4 characters)"
                 disabled={loading}
               />
             </div>

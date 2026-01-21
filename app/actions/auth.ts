@@ -11,6 +11,15 @@ export async function login(formData: FormData) {
     return { error: 'PIN is required' };
   }
 
+  // Validate PIN format and length
+  if (pin.length < 4) {
+    return { error: 'PIN must be at least 4 characters' };
+  }
+
+  if (pin.length > 50) {
+    return { error: 'PIN is too long' };
+  }
+
   const user = await authenticateUser(pin);
 
   if (!user) {
